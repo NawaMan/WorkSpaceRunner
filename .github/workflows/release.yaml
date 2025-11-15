@@ -1,0 +1,73 @@
+name: Publish workspace runners
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Make workspace executable
+        run: chmod +x workspace
+
+      - name: Read version from ./workspace version
+        id: get_version
+        run: |
+          # Expected output: "WorkSpace wrapper 0.1.0"
+          RAW_VERSION_OUTPUT=$(./workspace version)
+          echo "Raw version output: $RAW_VERSION_OUTPUT"
+
+          VERSION=$(echo "$RAW_VERSION_OUTPUT" | awk '{print $NF}')
+          if [ -z "$VERSION" ]; then
+            echo "Failed to parse version from ./workspace version" >&2
+            exit 1
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Show version
+        run: echo "Publishing workspace runners for version $VERSION"
+
+      - name: Generate SHA1 checksums
+        run: |
+          sha1sum workspace > workspace.sha1
+          sha1sum workspace.ps1 > workspace.ps1.sha1
+          echo "Generated checksums:"
+          cat workspace.sha1
+          cat workspace.ps1.sha1
+
+      - name: Publish versioned release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: ${{ env.VERSION }}
+          files: |
+            workspace
+            workspace.ps1
+            workspace.sha1
+            workspace.ps1.sha1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: latest
+          prerelease: false
+          draft: false
+          files: |
+            workspace
+            workspace.ps1
+            workspace.sha1
+            workspace.ps1.sha1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

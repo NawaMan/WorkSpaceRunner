@@ -1,2 +1,2 @@
 # WorkSpaceRunner
-Runner for the CodingBooth WorkSpace
+Runner for the CodingBooth WorkSpace.
